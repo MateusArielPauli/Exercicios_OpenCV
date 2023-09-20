@@ -29,7 +29,7 @@ class PdiApp(QMainWindow):
 
         self.default_actions =  [
             Action("Converter para Cinza", 0),
-            Action("Aplicar Filtro - Gaussian Blur", 0), 
+            Action("Filtro: Mediana", 0), 
             Action("Detectar Bordas - Canny", 0, 0), 
             Action("Binarizar Imagem"), 
             Action("Morfologia Matemática - erosão")
