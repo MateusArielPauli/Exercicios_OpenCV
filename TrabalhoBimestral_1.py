@@ -15,119 +15,58 @@ from PyQt5.QtGui import QImage, QPixmap
 import cv2
 import numpy as np
 
-class Action:
-    def __init__(self, nome, *args,):
-        self.nome = nome
-        self.args = args
-
 class PdiApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.selected_image = None
-        self.selected_elements = []
-        self.selected_action = None
-
-        self.default_actions =  [
-            Action("Converter para Cinza", 0),
-            Action("Filtro: Mediana", 0), 
-            Action("Detectar Bordas - Canny", 0, 0), 
-            Action("Binarizar Imagem"), 
-            Action("Morfologia Matemática - erosão")
-        ]
-        
         self.setWindowTitle("Trabalho Bimestral")
         self.setGeometry(100, 100, 300, 500)
 
         # Layout principal
-        main_layout = QHBoxLayout()
+        main_layout = QVBoxLayout()
 
-        # Área lateral para escolher elementos
-        self.lateral_widget = QWidget()
-        self.lateral_layout = QVBoxLayout()
+        open_button = QPushButton("Abrir Imagem", self)
+        open_button.clicked.connect(self.open_image)
+        main_layout.addWidget(open_button)
 
-        self.open_button = QPushButton("Abrir Imagem")
-        self.open_button.clicked.connect(self.open_image)
-        self.lateral_layout.addWidget(self.open_button)
 
-        self.action_list = QListWidget()
-        self.action_list.itemClicked.connect(self.apply_current_action) 
-        self.lateral_layout.addWidget(self.action_list)
+        # Botões para ações
+        convert_button = QPushButton("Converção de cor: HLS", self)
+        convert_button.clicked.connect(self.apply_conversion)
+        main_layout.addWidget(convert_button)
 
-        for action in self.default_actions:
-            self.action_list.addItem(action.nome)
+        median_button = QPushButton("Filtro: Mediana", self)
+        median_button.clicked.connect(self.apply_median_filter)
+        main_layout.addWidget(median_button)
 
-        self.open_button = QPushButton("Aplicar Operação")
-        self.open_button.clicked.connect(self.apply_action)
-        self.lateral_layout.addWidget(self.open_button)
+        laplace_button = QPushButton("Detector de Bordas: Laplace", self)
+        laplace_button.clicked.connect(self.apply_laplace_edge_detection)
+        main_layout.addWidget(laplace_button)
 
-        self.history_list = QListWidget()
-        self.history_list.itemClicked.connect(self.remove_item)
-        self.lateral_layout.addWidget(self.history_list)
+    
+        # Label para exibir a imagem
+        self.image_label = QLabel(self)
+        main_layout.addWidget(self.image_label)
 
-        self.clear_button = QPushButton("Limpar Histórico")
-        self.clear_button.clicked.connect(self.clear_history)
-        self.lateral_layout.addWidget(self.clear_button)
+        central_widget = QWidget(self)
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
 
-        self.lateral_widget.setLayout(self.lateral_layout)
-        main_layout.addWidget(self.lateral_widget)
-
-        # Widget principal
-        main_widget = QWidget()
-        main_widget.setLayout(main_layout)
-        self.setCentralWidget(main_widget)
-
-    def apply_current_action(self, item):
-        self.selected_action = item.text()
-
-    def apply_action(self):
+    def apply_conversion(self):
         if self.selected_image is not None:
-            if self.selected_action not in self.selected_elements:
-                self.selected_elements.append(self.selected_action)
-                self.history_list.addItem(self.selected_action)
-                self.actions()
+            hls_image = cv2.cvtColor(self.selected_image, cv2.COLOR_BGR2HLS)
+            self.display_image(hls_image)
 
-    def remove_item(self, item=None):
-        self.history_list.takeItem(self.history_list.row(item))
-        self.selected_elements.remove(item.text())
-        self.actions()
+    def apply_median_filter(self):
+        if self.selected_image is not None:
+            filtered_image = cv2.medianBlur(self.selected_image, 15)
+            self.display_image(filtered_image)
 
-    def clear_history(self):
-        self.history_list.clear()
-        self.selected_elements.clear()
-        self.actions()
-
-    def actions(self):
-        image_copy = self.selected_image.copy()
-
-        for element in self.selected_elements:
-            if element == "Converter para Cinza" and len(image_copy.shape) == 3:
-                gray_image = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
-                image_copy = gray_image
-                 
-            if element == "Filtro - Gaussian Blur":
-                # Implemente o método de filtro aqui (por exemplo, filtro de suavização)
-                # paramentros: imagem, tamanho do kernel, desvio padrão
-                filtered_image = cv2.GaussianBlur(image_copy, (5, 5), 0)
-                image_copy = filtered_image
-                 
-            if element == "Detectar Bordas - Canny":
-                # Implemente o método de detector de borda aqui (por exemplo, Canny)
-                # parametros: imagem, limiar minimo, limiar maximo
-                edge_image = cv2.Canny(image_copy, 100, 200)
-                image_copy = edge_image
-               
-            if element == "Binarizar Imagem":
-                # Implemente o método de binarização aqui (por exemplo, limiar simples)
-                _, binary_image = cv2.threshold(image_copy, 127, 255, cv2.THRESH_BINARY)
-                image_copy = binary_image
-              
-            if element == "Morfologia Matemática - erosão":
-                # Implemente o método de morfologia matemática aqui (por exemplo, erosão e dilatação)
-                kernel = np.ones((5, 5), np.uint8)
-                erosion_image = cv2.erode(image_copy, kernel, iterations=1)
-                image_copy = erosion_image
-              
-        self.display_image(image_copy)
+    def apply_laplace_edge_detection(self):
+        if self.selected_image is not None:
+            edges = cv2.Laplacian(self.selected_image, cv2.CV_64F)
+            edges = cv2.convertScaleAbs(edges)
+            self.display_image(edges)
 
     def display_image(self, image_copy):
         if image_copy is not None:
