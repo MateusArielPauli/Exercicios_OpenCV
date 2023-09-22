@@ -29,30 +29,40 @@ class PdiApp(QMainWindow):
         convert_button = QPushButton("Converção de cor: HLS", self)
         convert_button.clicked.connect(self.apply_conversion)
         main_layout.addWidget(convert_button)
+        convert_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
         median_button = QPushButton("Filtro: Mediana", self)
         median_button.clicked.connect(self.apply_median_filter)
         main_layout.addWidget(median_button)
+        median_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
         laplace_button = QPushButton("Detector de Bordas: Laplace", self)
         laplace_button.clicked.connect(self.apply_laplace_edge_detection)
         main_layout.addWidget(laplace_button)
+        laplace_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
         binary_button = QPushButton("Binarizar imagem: Threshould", self)
         binary_button.clicked.connect(self.apply_binarization)
         main_layout.addWidget(binary_button)
+        binary_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
         erosion_button = QPushButton("Morfologia Matemática: Erosão", self)
         erosion_button.clicked.connect(self.apply_erosion)
         main_layout.addWidget(erosion_button)
+        erosion_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+
+        # Adicionar espaçamento entre os botões
+        main_layout.addSpacing(80)
 
         open_button = QPushButton("Abrir Imagem", self)
         open_button.clicked.connect(self.open_image)
         main_layout.addWidget(open_button)
+        open_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
         reset_button = QPushButton("Reverter para Original", self)
         reset_button.clicked.connect(self.reset_image)
         main_layout.addWidget(reset_button)
+        reset_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
     
         # Label para exibir a imagem
         self.image_label = QLabel(self)
