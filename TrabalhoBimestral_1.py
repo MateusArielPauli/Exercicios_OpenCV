@@ -12,6 +12,8 @@ from PyQt5.QtWidgets import (
     QListWidgetItem,
 )
 from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import QSlider
+from PyQt5.QtCore import Qt
 import cv2
 import numpy as np
 
@@ -31,33 +33,51 @@ class PdiApp(QMainWindow):
         main_layout.addWidget(convert_button)
         convert_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
+        main_layout.addSpacing(50)
+        
         median_button = QPushButton("Filtro: Mediana", self)
         median_button.clicked.connect(self.apply_median_filter)
         main_layout.addWidget(median_button)
         median_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+
+        # Slider para controlar a intensidade do filtro blur
+        blur_slider = QSlider(Qt.Horizontal, self)
+        blur_slider.setMinimum(1)  # Valor mínimo do slider
+        blur_slider.setMaximum(30)  # Valor máximo do slider
+        blur_slider.setValue(15)  # Valor inicial do slider
+        blur_slider.valueChanged.connect(self.update_blur_intensity)
+        main_layout.addWidget(blur_slider)
+
+        main_layout.addSpacing(50)
 
         laplace_button = QPushButton("Detector de Bordas: Laplace", self)
         laplace_button.clicked.connect(self.apply_laplace_edge_detection)
         main_layout.addWidget(laplace_button)
         laplace_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
+        main_layout.addSpacing(50)
+
         binary_button = QPushButton("Binarizar imagem: Threshould", self)
         binary_button.clicked.connect(self.apply_binarization)
         main_layout.addWidget(binary_button)
         binary_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+
+        main_layout.addSpacing(50)
 
         erosion_button = QPushButton("Morfologia Matemática: Erosão", self)
         erosion_button.clicked.connect(self.apply_erosion)
         main_layout.addWidget(erosion_button)
         erosion_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
 
+        main_layout.addSpacing(50)
+
         # Adicionar espaçamento entre os botões
         main_layout.addSpacing(80)
-
         open_button = QPushButton("Abrir Imagem", self)
         open_button.clicked.connect(self.open_image)
         main_layout.addWidget(open_button)
         open_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+
 
         reset_button = QPushButton("Reverter para Original", self)
         reset_button.clicked.connect(self.reset_image)
@@ -72,6 +92,10 @@ class PdiApp(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
+    def update_blur_intensity(self, value):
+        # Garantir que o valor seja ímpar
+        self.blur_intensity = value if value % 2 == 1 else value + 1
+
     def apply_conversion(self):
         if self.selected_image is not None:
             hls_image = cv2.cvtColor(self.selected_image, cv2.COLOR_BGR2HLS)
@@ -79,7 +103,7 @@ class PdiApp(QMainWindow):
 
     def apply_median_filter(self):
         if self.selected_image is not None:
-            filtered_image = cv2.medianBlur(self.selected_image, 15)
+            filtered_image = cv2.medianBlur(self.selected_image, self.blur_intensity)
             self.display_image(filtered_image)
 
     def apply_laplace_edge_detection(self):
