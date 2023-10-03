@@ -1,61 +1,49 @@
-import os
 import cv2
-import csv
 import numpy as np
-from scipy.stats import describe
+from skimage.feature import graycomatrix, graycoprops
+import csv
+import os
 
-def calculate_glcm(image_gray):
-    # Calculo GLCM (propriedades: contraste, dissimilaridade, homogeneidade, ASM)
-    # Use o calcHist do OpenCV para calcular o GLCM
-    glcm = cv2.calcHist([image_gray.astype(np.uint8)], [0], None, [256], [0, 256])
-    glcm /= glcm.sum()  # Normalize para obter as probabilidades
-    contrast = np.sum(glcm * (np.arange(256) ** 2)) - (np.sum(glcm * np.arange(256))) ** 2
-    dissimilarity = np.sum(glcm * np.abs(np.arange(256)[:, None] - np.arange(256)))
-    homogeneity = np.sum(glcm / (1. + np.abs(np.arange(256) - np.arange(256)))).item()
-    asm = np.sum(glcm ** 2).item()
-    properties = {
-        'contrast': contrast,
-        'dissimilarity': dissimilarity,
-        'homogeneity': homogeneity,
-        'ASM': asm
-    }
-    return properties
-
-def extract_image_features(image_path):
+def extract_features(image_path):
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    
+    # Características estruturais
+    # Exemplo: Área e Perímetro (podem não ser precisos, dependendo da imagem)
+    ret,thresh = cv2.threshold(image,127,255,0)
+    contours,_ = cv2.findContours(thresh, 1, 2)
+    cnt = contours[0]
+    area = cv2.contourArea(cnt) # Área
+    perimeter = cv2.arcLength(cnt,True) # Perímetro
+    
+    # Estatísticas
+    mean = np.mean(image) # Média dos pixels
+    std_dev = np.std(image) # Desvio padrão dos pixels
+    max_value = np.max(image) # Valor máximo de pixel
+    min_value = np.min(image) # Valor mínimo de pixel
+    
+    # Características GLCM
+    glcm = graycomatrix(image, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], symmetric=True, normed=True)
+    contrast = graycoprops(glcm, 'contrast')[0, 0]
+    dissimilarity = graycoprops(glcm, 'dissimilarity')[0, 0]
+    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
+    energy = graycoprops(glcm, 'energy')[0, 0]
+    
+    return area, perimeter, mean, std_dev, max_value, min_value, contrast, dissimilarity, homogeneity, energy
 
-    # Extraindo características estruturais (largura e altura)
-    height, width = image.shape[:2]
+def process_directory(directory):
+    with open('extracaoCaracteristicas.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        # Escrevendo o cabeçalho do CSV
+        writer.writerow(['Class_Name', 'Area', 'Perimeter', 'Mean', 'Std_Dev', 'Max_Value', 'Min_Value', 'Contrast', 'Dissimilarity', 'Homogeneity', 'Energy'])
 
-    # Calculando estatisticas
-    stats = describe(image.ravel())
-
-    # Calculandao caracteristicas GLCM
-    glcm_properties = calculate_glcm(image)
-
-    return {'width': width, 'height': height}, stats, glcm_properties
-
-def list_image_features_in_directory(directory):
-    try:
-        if os.path.isdir(directory):
-            files = [f for f in os.listdir(directory) if f.lower().endswith(('.pgm', 'png', '.jpg', '.jpeg', '.gif'))]
-            print("Image Features:")
-            for file in files:
-                image_path = os.path.join(directory, file)
-                features = extract_image_features(image_path)
-                print(f"Image: {file}")
-                print("Structural Characteristics:")
-                print(features[0])
-                print("Statistics:")
-                print(features[1])
-                print("GLCM Properties:")
-                print(features[2])
-                print("--------------------")
-        else:
-            print("Diretorio Invalido")
-    except Exception as e:
-        print(f"Erro: {str(e)}")
-
-directory_path = 'imagens/imgMaiusculas/MAIUSCULAS'
-output_directory_path = ''
-list_image_features_in_directory(directory_path)
+        for filename in os.listdir(directory):
+            if filename.endswith(".pgm") or filename.endswith(".jpg"):
+                filepath = os.path.join(directory, filename)
+                area, perimeter, mean, std_dev, max_value, min_value, contrast, dissimilarity, homogeneity, energy = extract_features(filepath)
+                
+                # Supondo que o nome da classe seja derivado do nome do arquivo
+                class_name = filename.split('_')[0]
+                print(f"{class_name}, {area}, {perimeter}, {mean}, {std_dev}, {max_value}, {min_value}, {contrast}, {dissimilarity}, {homogeneity}, {energy}")
+                # Escrevendo as características extraídas no arquivo CSV
+                writer.writerow([class_name, area, perimeter, mean, std_dev, max_value, min_value, contrast, dissimilarity, homogeneity, energy])
+process_directory('imagens/imgMaiusculas/MAIUSCULAS/')
