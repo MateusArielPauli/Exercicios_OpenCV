@@ -9,6 +9,9 @@
 *.zip
 *.tar.gz
 *.rar
+*.csv
+*.png
+*.jpg
 
 #folder
 opencv/
@@ -16,3 +19,4 @@ imagens/
 
 #archive file
 teste.py 
+testando.py

@@ -4,7 +4,6 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
     QPushButton,
     QLabel,
     QFileDialog,
@@ -18,6 +17,8 @@ class PdiApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.selected_image = None
+        self.modified_image = None  # Imagem modificada (para manter o estado atual)
+
         self.setWindowTitle("Trabalho Bimestral")
         self.setGeometry(100, 100, 300, 300)
 
@@ -27,17 +28,22 @@ class PdiApp(QMainWindow):
         main_layout = QVBoxLayout()
 
         # Botões para ações
-        convert_button = QPushButton("Converção de cor: HLS", self)
-        convert_button.clicked.connect(self.apply_conversion)
+        convert_button = QPushButton("Converção de cor: GRAY", self)
+        convert_button.clicked.connect(self.apply_conversion_GRAY)
         main_layout.addWidget(convert_button)
-        convert_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+        convert_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
+
+        convert_button2 = QPushButton("Converção de cor: HLS", self)
+        convert_button2.clicked.connect(self.apply_conversion_HLS)
+        main_layout.addWidget(convert_button2)
+        convert_button2.setStyleSheet("font-size: 14px")  # Tamanho fonte
 
         main_layout.addSpacing(50)
         
         median_button = QPushButton("Filtro: Mediana", self)
         median_button.clicked.connect(self.apply_median_filter)
         main_layout.addWidget(median_button)
-        median_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+        median_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
 
         # Slider para controlar a intensidade do filtro blur
         blur_slider = QSlider(Qt.Horizontal, self)
@@ -55,7 +61,7 @@ class PdiApp(QMainWindow):
         laplace_button = QPushButton("Detector de Bordas: Laplace", self)
         laplace_button.clicked.connect(self.apply_laplace_edge_detection)
         main_layout.addWidget(laplace_button)
-        laplace_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+        laplace_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
 
         # Slider para controlar o tamanho do kernel (para o detector de bordas de Laplace)
         self.kernel_slider = QSlider(Qt.Horizontal, self)
@@ -73,7 +79,7 @@ class PdiApp(QMainWindow):
         binary_button = QPushButton("Binarizar imagem: Threshould", self)
         binary_button.clicked.connect(self.apply_binarization)
         main_layout.addWidget(binary_button)
-        binary_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+        binary_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
 
         # Slider para controlar o valor de threshould para a binarização
         self.thresh_slider = QSlider(Qt.Horizontal, self)
@@ -91,7 +97,7 @@ class PdiApp(QMainWindow):
         erosion_button = QPushButton("Morfologia Matemática: Erosão", self)
         erosion_button.clicked.connect(self.apply_erosion)
         main_layout.addWidget(erosion_button)
-        erosion_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+        erosion_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
 
         # Slider para controlar o tamanho do kernel para a operação de erosão
         self.erosion_kernel_slider = QSlider(Qt.Horizontal, self)
@@ -123,12 +129,18 @@ class PdiApp(QMainWindow):
         open_button = QPushButton("Abrir Imagem", self)
         open_button.clicked.connect(self.open_image)
         main_layout.addWidget(open_button)
-        open_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+        open_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
 
         reset_button = QPushButton("Reverter para Original", self)
         reset_button.clicked.connect(self.reset_image)
         main_layout.addWidget(reset_button)
-        reset_button.setStyleSheet("font-size: 16px")  # Ajuste o tamanho da fonte conforme necessário
+        reset_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
+
+        #Salvar a nova imagem
+        save_button = QPushButton("Salvar Imagem Editada", self)
+        save_button.clicked.connect(self.save_image)
+        main_layout.addWidget(save_button)
+        save_button.setStyleSheet("font-size: 14px")  # Tamanho fonte
     
         # Label para exibir a imagem
         self.image_label = QLabel(self)
@@ -144,37 +156,66 @@ class PdiApp(QMainWindow):
         # Atualizar o valor da intensidade no label
         self.blur_intensity_label.setText(f'Blur Intensity: {self.blur_intensity}')
 
-        if self.selected_image is not None:
+        if self.modified_image is not None:
             # Aplicar o filtro de mediana
-            filtered_image = cv2.medianBlur(self.selected_image, self.blur_intensity)
+            filtered_image = cv2.medianBlur(self.modified_image, self.blur_intensity)
             self.display_image(filtered_image)
         
-    
+        #self.modified_image = filtered_image
+        return filtered_image
+        
     def update_kernel_size(self, value):
         # Garantir que o valor seja ímpar (necessário para o kernel do detector de bordas de Laplace)
         kernel_size = value if value % 2 == 1 else value + 1
         self.kernel_size = kernel_size
         self.actions()  # Aplicar a ação do detector de bordas de Laplace em tempo real
 
-    def apply_conversion(self):
-        if self.selected_image is not None:
-            hls_image = cv2.cvtColor(self.selected_image, cv2.COLOR_BGR2HLS)
+    def apply_conversion_GRAY(self):
+        if self.modified_image is not None and len(self.modified_image.shape) == 3 and self.modified_image.shape[2] == 3:
+            gray_image = cv2.cvtColor(self.modified_image, cv2.COLOR_BGR2GRAY)
+            self.display_image(gray_image)
+            self.modified_image = gray_image
+        else:
+            print("A imagem não é colorida (3 canais).")
+        return self.modified_image
+
+    def apply_conversion_HLS(self):
+        if self.modified_image is not None and len(self.modified_image.shape) == 3 and self.modified_image.shape[2] == 3:
+            hls_image = cv2.cvtColor(self.modified_image, cv2.COLOR_BGR2HLS)
             self.display_image(hls_image)
+            self.modified_image = hls_image
+        else:
+            print("A imagem não é colorida (3 canais).")
+        return self.modified_image
+
 
     def apply_median_filter(self):
-        if self.selected_image is not None:
-            filtered_image = cv2.medianBlur(self.selected_image, self.blur_intensity)
+        if self.modified_image is not None:
+            filtered_image = cv2.medianBlur(self.modified_image, self.blur_intensity)
             self.display_image(filtered_image)
+            self.modified_image = filtered_image
+        return self.modified_image
 
     def apply_laplace_edge_detection(self):
-        if self.selected_image is not None:
+        if self.modified_image is not None and len(self.modified_image.shape) == 3 and self.modified_image.shape[2] == 3:
             # Obter o tamanho do kernel (garantir que seja ímpar)
             kernel_size = self.kernel_slider.value()
             kernel_size = kernel_size if kernel_size % 2 == 1 else kernel_size - 1
 
             # Aplicar o detector de bordas de Laplace
-            gray_image = cv2.cvtColor(self.selected_image, cv2.COLOR_BGR2GRAY)
+            gray_image = cv2.cvtColor(self.modified_image, cv2.COLOR_BGR2GRAY)
             edges = cv2.Laplacian(gray_image, cv2.CV_64F, ksize=kernel_size)
+            edges = cv2.convertScaleAbs(edges)
+            self.display_image(edges)
+            # Atualizar o valor do kernel no label
+            self.kernel_value_label.setText(f'Kernel Size: {self.kernel_slider.value()}')
+        else:
+            # Obter o tamanho do kernel (garantir que seja ímpar)
+            kernel_size = self.kernel_slider.value()
+            kernel_size = kernel_size if kernel_size % 2 == 1 else kernel_size - 1
+
+            # Aplicar o detector de bordas de Laplace
+            edges = cv2.Laplacian(self.modified_image, cv2.CV_64F, ksize=kernel_size)
             edges = cv2.convertScaleAbs(edges)
             self.display_image(edges)
             # Atualizar o valor do kernel no label
@@ -182,32 +223,38 @@ class PdiApp(QMainWindow):
 
     
     def apply_binarization(self):
-        if self.selected_image is not None:
+        if self.modified_image is not None and len(self.modified_image.shape) == 3 and self.modified_image.shape[2] == 3:
             # Aplicar binarização com um limiar (threshold)
-            gray_image = cv2.cvtColor(self.selected_image, cv2.COLOR_BGR2GRAY)
-            _, binary_image = cv2.threshold(self.selected_image, self.thresh_slider.value(), 255, cv2.THRESH_BINARY)
+            gray_image = cv2.cvtColor(self.modified_image, cv2.COLOR_BGR2GRAY)
+            _, binary_image = cv2.threshold(gray_image, self.thresh_slider.value(), 255, cv2.THRESH_BINARY)
+            self.display_image(binary_image)
+            # Atualizar o valor de threshould no label
+            self.thresh_value_label.setText(f'Threshold Value: {self.thresh_slider.value()}')
+        else:
+            # Aplicar binarização com um limiar (threshold)
+            _, binary_image = cv2.threshold(self.modified_image, self.thresh_slider.value(), 255, cv2.THRESH_BINARY)
             self.display_image(binary_image)
             # Atualizar o valor de threshould no label
             self.thresh_value_label.setText(f'Threshold Value: {self.thresh_slider.value()}')
 
 
     def apply_erosion(self):
-        if self.selected_image is not None:
+        if self.modified_image is not None:
             # Obter o tamanho do kernel para a erosão
             kernel_size = self.erosion_kernel_slider.value()
 
             # Aplicar operação de erosão
             kernel = np.ones((kernel_size, kernel_size), np.uint8)
-            erosion_image = cv2.erode(self.selected_image, kernel, iterations=self.erosion_slider.value())
+            erosion_image = cv2.erode(self.modified_image, kernel, iterations=self.erosion_slider.value())
             self.display_image(erosion_image)
             # Atualizar o tamanho do kernel no label
             self.erosion_kernel_value_label.setText(f'Erosion Kernel Size: {kernel_size}')
             # Atualizar o número de iterações no label
             self.erosion_value_label.setText(f'Erosion Iterations: {self.erosion_slider.value()}')
 
-
     def reset_image(self):
         if self.selected_image is not None:
+            self.modified_image = self.selected_image
             self.display_image(self.selected_image)
 
     def display_image(self, image_copy):
@@ -223,11 +270,27 @@ class PdiApp(QMainWindow):
         if image_path:
             try:
                 self.selected_image = cv2.imread(image_path)
-                self.display_image(self.selected_image)
+                self.modified_image = self.selected_image
+                self.display_image(self.modified_image)
+                
+
             except Exception as e:
                 print("Erro ao abrir a imagem:", str(e))
         else:
-            print("Nenhuma imagem selecionada.")
+            print("Nenhuma iselected_image")
+        
+
+    def save_image(self):
+        if self.modified_image is not None:
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            file_path, _ = QFileDialog.getSaveFileName(self, "Salvar Imagem", "", "Images (*.png *.jpg *.bmp);;All Files(*)", options=options)
+            if file_path:
+                try:
+                    cv2.imwrite(file_path, self.modified_image)
+                    print("Imagem salva com sucesso.")
+                except Exception as e:
+                    print("Erro ao salvar a imagem:", str(e))
     
 if __name__ == "__main__":
     app = QApplication(sys.argv)
