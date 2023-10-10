@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QFileDialog,
 )
-from PyQt5.QtWidgets import QSlider
+from PyQt5.QtWidgets import QSlider, QListWidget, QListWidgetItem
 from PyQt5.QtCore import Qt
 import cv2
 import numpy as np
@@ -18,6 +18,7 @@ class PdiApp(QMainWindow):
         super().__init__()
         self.selected_image = None
         self.modified_image = None  # Imagem modificada (para manter o estado atual)
+        self.history = []
 
         self.setWindowTitle("Trabalho Bimestral")
         self.setGeometry(100, 100, 300, 300)
@@ -37,8 +38,6 @@ class PdiApp(QMainWindow):
         convert_button2.clicked.connect(self.apply_conversion_HLS)
         main_layout.addWidget(convert_button2)
         convert_button2.setStyleSheet("font-size: 14px")  # Tamanho fonte
-
-        main_layout.addSpacing(50)
         
         median_button = QPushButton("Filtro: Mediana", self)
         median_button.clicked.connect(self.apply_median_filter)
@@ -124,7 +123,11 @@ class PdiApp(QMainWindow):
         main_layout.addWidget(self.erosion_value_label)
 
         # Adicionar espaçamento entre os botões
-        main_layout.addSpacing(80)
+        main_layout.addSpacing(30)
+
+        self.history_list = QListWidget(self)
+        self.history_list.itemClicked.connect(self.undo_operation)
+        main_layout.addWidget(self.history_list)
 
         open_button = QPushButton("Abrir Imagem", self)
         open_button.clicked.connect(self.open_image)
@@ -161,7 +164,6 @@ class PdiApp(QMainWindow):
             filtered_image = cv2.medianBlur(self.modified_image, self.blur_intensity)
             self.display_image(filtered_image)
         
-        #self.modified_image = filtered_image
         return filtered_image
         
     def update_kernel_size(self, value):
@@ -175,8 +177,11 @@ class PdiApp(QMainWindow):
             gray_image = cv2.cvtColor(self.modified_image, cv2.COLOR_BGR2GRAY)
             self.display_image(gray_image)
             self.modified_image = gray_image
+
+            self.add_to_history(gray_image)
         else:
             print("A imagem não é colorida (3 canais).")
+        
         return self.modified_image
 
     def apply_conversion_HLS(self):
@@ -184,8 +189,11 @@ class PdiApp(QMainWindow):
             hls_image = cv2.cvtColor(self.modified_image, cv2.COLOR_BGR2HLS)
             self.display_image(hls_image)
             self.modified_image = hls_image
+
+            self.add_to_history(hls_image)
         else:
             print("A imagem não é colorida (3 canais).")
+        
         return self.modified_image
 
 
@@ -194,6 +202,7 @@ class PdiApp(QMainWindow):
             filtered_image = cv2.medianBlur(self.modified_image, self.blur_intensity)
             self.display_image(filtered_image)
             self.modified_image = filtered_image
+        self.add_to_history(filtered_image)
         return self.modified_image
 
     def apply_laplace_edge_detection(self):
@@ -220,6 +229,7 @@ class PdiApp(QMainWindow):
             self.display_image(edges)
             # Atualizar o valor do kernel no label
             self.kernel_value_label.setText(f'Kernel Size: {self.kernel_slider.value()}')
+        self.add_to_history(self.modified_image)
         return self.modified_image
 
     
@@ -237,6 +247,7 @@ class PdiApp(QMainWindow):
             self.display_image(binary_image)
             # Atualizar o valor de threshould no label
             self.thresh_value_label.setText(f'Threshold Value: {self.thresh_slider.value()}')
+        self.add_to_history(self.modified_image)
         return self.modified_image
 
 
@@ -253,7 +264,30 @@ class PdiApp(QMainWindow):
             self.erosion_kernel_value_label.setText(f'Erosion Kernel Size: {kernel_size}')
             # Atualizar o número de iterações no label
             self.erosion_value_label.setText(f'Erosion Iterations: {self.erosion_slider.value()}')
+        self.add_to_history(self.modified_image)
         return self.modified_image
+    
+    def add_to_history(self, image):
+        # Adicionar a imagem ao histórico apenas se ela for diferente da última imagem no histórico
+        if len(self.history) == 0 or not np.array_equal(self.history[-1], image):
+            self.history.append(image)
+            self.update_history_list()
+
+    def update_history_list(self):
+        self.history_list.clear()
+        for i, image in enumerate(self.history):
+            item = QListWidgetItem(f'Operação {i+1}')
+            self.history_list.addItem(item)
+
+    def undo_operation(self, item):
+        index = self.history_list.row(item)
+        if index >= 0 and index < len(self.history):
+            del self.history[index]  # Remover a operação selecionada do histórico
+            self.update_history_list()  # Atualizar a lista de histórico
+            # Se a operação removida era a última, exibir a imagem resultante da penúltima operação
+            if index == len(self.history):
+                self.modified_image = self.history[-1] if self.history else self.selected_image
+                self.display_image(self.modified_image)
 
     def reset_image(self):
         if self.selected_image is not None:
