@@ -220,6 +220,7 @@ class PdiApp(QMainWindow):
             self.display_image(edges)
             # Atualizar o valor do kernel no label
             self.kernel_value_label.setText(f'Kernel Size: {self.kernel_slider.value()}')
+        return self.modified_image
 
     
     def apply_binarization(self):
@@ -236,6 +237,7 @@ class PdiApp(QMainWindow):
             self.display_image(binary_image)
             # Atualizar o valor de threshould no label
             self.thresh_value_label.setText(f'Threshold Value: {self.thresh_slider.value()}')
+        return self.modified_image
 
 
     def apply_erosion(self):
@@ -251,6 +253,7 @@ class PdiApp(QMainWindow):
             self.erosion_kernel_value_label.setText(f'Erosion Kernel Size: {kernel_size}')
             # Atualizar o número de iterações no label
             self.erosion_value_label.setText(f'Erosion Iterations: {self.erosion_slider.value()}')
+        return self.modified_image
 
     def reset_image(self):
         if self.selected_image is not None:
